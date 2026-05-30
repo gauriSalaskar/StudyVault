@@ -177,7 +177,7 @@ export function MintNFTModal({ note, onClose, onSuccess }: MintNFTModalProps) {
             )}
 
             <Button
-              variant="amber"
+              variant="premium"
               className="w-full gap-2 h-12 text-base"
               onClick={handleMint}
               isLoading={minting}
