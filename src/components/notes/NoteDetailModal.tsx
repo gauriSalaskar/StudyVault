@@ -25,13 +25,36 @@ export function NoteDetailModal({ note, onClose }: NoteDetailModalProps) {
 
   const handlePurchase = async () => {
     if (!isAuthenticated) { showToast.warning('Please login first'); return; }
-    if (!canAfford && !note.isFree) { showToast.error(`Need ${note.price} SVT tokens`); return; }
+    if (!canAfford && !note.isFree) { showToast.error('Need ' + note.price + ' SVT tokens'); return; }
     setPurchasing(true);
-    await new Promise(r => setTimeout(r, 1500));
-    if (!note.isFree) updateTokenBalance(-note.price);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.from('purchases').insert({
+          id: 'purchase_' + Date.now(),
+          user_id: session.user.id,
+          note_id: note.id,
+        });
+        await supabase.from('notes').update({ downloads: note.downloads + 1 }).eq('id', note.id);
+      }
+      if (!note.isFree) updateTokenBalance(-note.price);
+      const fileUrl = note.ipfsHash?.startsWith('http') ? note.ipfsHash : null;
+      if (fileUrl) {
+        const a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = note.title;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      showToast.success('Downloaded: ' + note.title);
+      onClose();
+    } catch (err) {
+      showToast.error('Download failed. Please try again.');
+    }
     setPurchasing(false);
-    showToast.success(`✅ "${note.title}" downloaded!`);
-    onClose();
   };
 
   const tabs = [
